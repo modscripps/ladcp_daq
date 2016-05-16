@@ -1,0 +1,91 @@
+cd ~
+load sampledata
+%load in the matlab format of the string that we have in memory after
+%reading the serial stream.
+
+
+%%
+%initialize handles.buffa in the start routine
+
+%Then in ParseData:
+
+%First, add the recent buffer to our long string.
+handles.buffa = [handles.buffa buff];
+
+%Find the beginning of a record.
+i1=findstr(handles.buffa,'7F7F93');
+
+if isempty(i1) %no beginnings here; do nothing
+else
+    %put the data in the outbox
+outstr=handles.buffa(i1(1):end);
+    
+end
+
+outstr=sampledata(i1(1));
+fwrite(fid,outstr)
+
+
+%% Or another method that avoids having to save the longer string:
+in
+%in start button routine, initialize a flag that is 1 only after we have
+%found the first instance of the record start.
+handles.foundstart=0;
+
+%Then in the ParseData, 
+
+%if handles.foundstart
+%    fwrite(fid,outstr)
+
+    
+    
+%%
+
+in=fopen('SerialOut_Oct29_LADCPclean.txt','rt');
+outstr=fscanf(in,'%s');
+
+fid=fopen('testout1.000','wb');
+
+fwrite(fid,outstr)
+
+fclose(fid)
+
+
+Vel=Get_ADCP_fullSC_BT('testout1.000',-1,1);
+
+%This works!
+
+%%
+%Now test on actual data collected from the uplink, saved to a text file with a terminal
+%program.
+
+in=fopen('serial.txt');
+outstr=fscanf(in,'%s');
+fclose(in)
+%%
+%Make sure it is even records
+if rem(length(outstr),2)==1
+    outstr=outstr(1:end-1);
+end
+%We need to turn the hex strings into binary bytes.  Each byte is
+%represented by two hex characters.  We'll do this by reshaping the matrix
+%into two rows and calling hex2dec on each column.
+
+%Then reshape so that each two hex characters are in a column (ie the first
+%and second from the original string are in the first column, the third and
+%fourth characters in the second column, and so on).
+tmp=reshape(outstr,2,length(outstr)/2)';
+
+%Then turn this into an unsigned integer by calling hex2dec on each column
+out=hex2dec(tmp)';
+
+%
+fid=fopen('test-fwrite.000','wb','l');
+
+fwrite(fid,out,'uint8')
+
+fclose(fid)
+
+Vel=Get_ADCP_fullSC_BT('test-fwrite.000',-1,1);
+
+%This works!
